@@ -3598,8 +3598,10 @@ class TestPatternMatcher(TestPatternMatcherBase):
     @parametrize("dtype", [torch.float, torch.bfloat16])
     @parametrize("dynamic", [True, False])
     @parametrize("reshape_a", [True, False])
+    @parametrize("M", [1, 32])
+    @parametrize("inplace_add", [True, False])
     def test_da8w8_sym_act_sym_wgt_with_int_mm(
-        self, has_bias, dtype, dynamic, reshape_a
+        self, has_bias, dtype, dynamic, reshape_a, M, inplace_add
     ):
         r"""
         This testcase check if we can match the int8_dynamic_activation_int8_weight int8 linear pattern from torchao,
@@ -3614,7 +3616,6 @@ class TestPatternMatcher(TestPatternMatcherBase):
         """
         if dtype == torch.bfloat16 and not torch.ops.mkldnn._is_mkldnn_bf16_supported():
             return
-        M = 32
         in_feature = 32
         out_feature = 64
         q_min, q_max = -32, 31
@@ -3631,6 +3632,7 @@ class TestPatternMatcher(TestPatternMatcherBase):
                 self.b_scale = torch.rand([out_feature]) * 0.01 + 0.01
                 self.b_scale = self.b_scale.to(dtype)
                 self.bias = torch.rand([out_feature], dtype=dtype) if has_bias else None
+                self.additive = torch.rand([M, out_feature], dtype=dtype)
 
             def forward(self, a):
                 if reshape_a:
@@ -3644,6 +3646,8 @@ class TestPatternMatcher(TestPatternMatcherBase):
                 c = c * self.b_scale
                 if self.has_bias:
                     c = c + self.bias
+                if inplace_add:
+                    c.add_(self.additive)
                 return c
 
         mod = Mod(dtype, has_bias).eval()
