@@ -4132,7 +4132,7 @@ class CPUReproTests(TestCase):
                 expected = mod(x)
                 compiled_m = torch.compile(mod)
                 actual, code = run_and_get_cpp_code(compiled_m, x)
-                self.assertEqual(expected, actual, atol=1e-4, rtol=1e-5)
+                self.assertEqual(expected, actual)
                 # 3 generated kernels (first one for var_mean, last two for result)
                 check_metrics_vec_kernel_count(3)
                 # check that there is no outer loop fusion.
@@ -4140,6 +4140,8 @@ class CPUReproTests(TestCase):
                     len(metrics.cpp_outer_loop_fused_inner_counts),
                     0,
                 )
+                # check for parallel reduction.
+                FileCheck().check("tmp_acc0_vec_arr").run(code)
 
     def test_int_div_vec(self):
         def fn(x, y, mode):
