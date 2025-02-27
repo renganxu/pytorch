@@ -558,6 +558,25 @@ class OuterLoopFusedSchedulerNode(FusedSchedulerNode):
             ):
                 return False
 
+        for cpp_kernel_proxy in cpp_kernel_proxy_list:
+            outer_ranges = functools.reduce(
+                lambda x, y: x * y,
+                cpp_kernel_proxy.ranges[:outer_loop_fusion_depth],
+            )
+            # If the range of the first inner loop is much larger than
+            # the range of all outer loops, fallback to standard codegen.
+            if (
+                len(cpp_kernel_proxy.ranges) > outer_loop_fusion_depth
+                and isinstance(outer_ranges, sympy.Integer)
+                and isinstance(
+                    cpp_kernel_proxy.ranges[outer_loop_fusion_depth],
+                    sympy.Integer,
+                )
+                and outer_ranges * 300
+                < cpp_kernel_proxy.ranges[outer_loop_fusion_depth]
+            ):
+                return False
+
         return True
 
     def merge_outer_fusion_kernels(
