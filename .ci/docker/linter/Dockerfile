@@ -27,7 +27,5 @@ COPY ./common/common_utils.sh common_utils.sh
 RUN bash ./install_linter.sh
 RUN rm install_linter.sh common_utils.sh
 
-RUN ln -s /usr/bin/python3 /usr/bin/python
-
 USER jenkins
 CMD ["bash"]
